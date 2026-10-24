@@ -152,10 +152,44 @@
       transition: background 0.35s ease, backdrop-filter 0.35s ease;
     }
 
-    .site-header.scrolled {
-      background: rgba(10, 10, 10, 0.85);
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
+    /* ── FROSTED / REEDED GLASS traka — SVJETLO staklo, tamni tekst ───────
+       Puna širina, ista visina kao originalni header. Staklo je svijetlo
+       (bijela poluprozirna podloga + blur + distorzija), a tekst je tamni:
+       tako je čitljiv i na bijeloj i na crnoj podlozi (najgori slučaj je
+       crna podloga → svijetlo-siva, a tamni tekst na njoj je i dalje čitljiv).
+       Linkovi su u "bedževima" (kao u primjeru s Webflowa), radijus 6px
+       kao na okvirima na ostatku stranice.
+
+       Redoslijed filtera: prvo NATIVNI blur (on zrcali rubove, pa nema
+       "procjepa" na vrhu), zatim SVG distorzija (pomak udesno).
+       Chromium: blur + distorzija. Safari/Firefox: samo blur.
+       VAŽNO: .site-header sam NE smije imati backdrop-filter. */
+    .site-header::before {
+      content: "";
+      position: absolute;
+      top: 0; bottom: 0;
+      left: -48px; right: -48px;   /* višak sa strane da distorzija nema prazne rubove */
+      z-index: -1;
+      pointer-events: none;
+      background: linear-gradient(180deg, rgba(255,255,255,0.58) 0%, rgba(255,255,255,0.44) 100%);
+      -webkit-backdrop-filter: blur(14px) saturate(1.5) brightness(1.1);
+      backdrop-filter: blur(14px) saturate(1.5) brightness(1.1);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.55);
+      box-shadow: 0 1px 0 rgba(10, 10, 10, 0.06), 0 10px 30px rgba(10, 10, 10, 0.10);
+      opacity: 0;
+      transition: opacity 0.35s ease;
+    }
+
+    .has-svg-glass .site-header::before {
+      -webkit-backdrop-filter: blur(14px) url(#glass-frost) saturate(1.5) brightness(1.1);
+      backdrop-filter: blur(14px) url(#glass-frost) saturate(1.5) brightness(1.1);
+    }
+
+    .site-header.scrolled::before { opacity: 1; }
+
+    /* Rezervna varijanta za preglednike bez backdrop-filter podrške */
+    @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+      .site-header::before { background: rgba(236, 236, 234, 0.96); }
     }
 
     .header-inner {
@@ -164,6 +198,31 @@
       justify-content: space-between;
     }
 
+    /* ── Tamni tekst + bedževi kad je staklo aktivno ── */
+    .site-header.scrolled .logo {
+      color: var(--black);
+    }
+
+    .site-header.scrolled .nav a {
+      color: rgba(10, 10, 10, 0.85);
+      background: rgba(255, 255, 255, 0.55);
+      border-color: rgba(10, 10, 10, 0.08);
+      box-shadow: 0 1px 2px rgba(10, 10, 10, 0.06);
+    }
+
+    .site-header.scrolled .nav a:hover {
+      color: var(--black);
+      background: rgba(255, 255, 255, 0.92);
+    }
+
+    .site-header.scrolled .hamburger {
+      background: rgba(255, 255, 255, 0.55);
+      border: 1px solid rgba(10, 10, 10, 0.08);
+      border-radius: 6px;
+    }
+
+    .site-header.scrolled .hamburger-bar { background: var(--black); }
+
     .logo {
       font-family: var(--font-display);
       font-size: 1.32rem;
@@ -171,6 +230,7 @@
       color: var(--white);
       letter-spacing: -0.01em;
       margin-left: 12px; /* precizna korekcija poravnanja s hero tekstom ispod */
+      transition: color 0.35s ease;
     }
 
     /* ── MOBITEL: hamburger CSS dolazi niže u @media bloku ── */
@@ -182,7 +242,8 @@
     .nav {
       display: flex;
       align-items: center;
-      gap: 36px;
+      gap: 8px;
+      margin-right: -14px; /* kompenzira padding bedža da desni rub teksta ostane na istom mjestu */
       list-style: none;
     }
 
@@ -190,12 +251,16 @@
       display: flex;
       align-items: center;
       gap: 8px;
+      padding: 9px 14px;
+      border-radius: 6px;
+      border: 1px solid transparent;
+      background: transparent;
       color: rgba(255,255,255,0.7);
       font-size: 0.875rem;
       font-weight: 500;
       letter-spacing: 0.04em;
       text-transform: uppercase;
-      transition: color 0.2s;
+      transition: color 0.25s, background 0.3s ease, border-color 0.3s ease;
     }
 
     /* Strelica umjesto kružića — dijagonalna u mirovanju, izravna se na hover */
@@ -237,6 +302,7 @@
       padding: 4px;
       z-index: 201;
       flex-shrink: 0;
+      transition: background 0.3s ease, border-color 0.3s ease;
     }
 
     .hamburger-bar {
@@ -1760,6 +1826,25 @@
 
 <body>
 
+  <!-- SVG filter za "narebreno staklo" u headeru (koristi se samo u Chromium preglednicima) -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+    <defs>
+      <filter id="glass-frost" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB">
+        <!-- uski okomiti "žljebovi" (visoka frekvencija po x, gotovo nikakva po y) -->
+        <feTurbulence type="fractalNoise" baseFrequency="0.018 0.0004" numOctaves="2" seed="7" result="noise"/>
+        <!-- R = pomak (pristran ulijevo => sadržaj se pomiče udesno), G = 0.5 (bez okomitog pomaka) -->
+        <feColorMatrix in="noise" type="matrix"
+          values="0.6 0 0 0 0
+                  0   0 0 0 0.5
+                  0   0 0 0 0
+                  0   0 0 0 1" result="map"/>
+        <feDisplacementMap in="SourceGraphic" in2="map" scale="64" xChannelSelector="R" yChannelSelector="G" result="shifted"/>
+        <!-- samo vodoravno omekšavanje žljebova (okomiti blur bi stvarao procjep na vrhu) -->
+        <feGaussianBlur in="shifted" stdDeviation="3 0"/>
+      </filter>
+    </defs>
+  </svg>
+
   <!-- ══════════════════════════════════════════
        HEADER
   ══════════════════════════════════════════ -->
@@ -2438,6 +2523,14 @@
        JAVASCRIPT
   ══════════════════════════════════════════ -->
   <script>
+    /* ── Chromium detekcija: SVG filter u backdrop-filteru radi samo tamo ── */
+    (function () {
+      const brands = (navigator.userAgentData && navigator.userAgentData.brands) || [];
+      if (brands.some(b => /Chromium/i.test(b.brand))) {
+        document.documentElement.classList.add('has-svg-glass');
+      }
+    })();
+
     /* ── Header scroll efekt ── */
     const header = document.getElementById('site-header');
     window.addEventListener('scroll', () => {
